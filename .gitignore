@@ -9,3 +9,5 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+SFC/.DS_Store
+.DS_Store
