@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.11)
 project(SFC)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -13,6 +13,6 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(DataFrame)
 
-add_executable(SFC main.cpp MortonExperiment.hpp)
+add_executable(SFC main.cpp MortonExperiment.hpp Hilbert.hpp)
 
 target_link_libraries (SFC PRIVATE DataFrame::DataFrame)

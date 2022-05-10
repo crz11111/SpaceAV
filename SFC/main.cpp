@@ -1,26 +1,33 @@
 #include <iostream>
 #include <DataFrame/DataFrame.h>
+#include <bitset>
 
 #include "MortonExperiment.hpp"
 #include "Hilbert.hpp"
 
-using namespace std;
 using namespace hmdf;
 
 using iDataFrame = StdDataFrame<int>;
 
-#define HILBERT_SIZE 24 //Hilbert integer size in bits
+int main(int argc, char **argv) {
+    if(argc != 3){
+        std::cout << "Wrong arguments, please specify your data source as: \n ./SFC <ORIGIN_DATA_PATH> <OUTPUT_PATH>" << std::endl;
+        return 1;
+    }
 
-int main() {
     // Read original csv data
     iDataFrame df;
-    df.read("/Users/coulsonchen/Downloads/SpaceAV/SFC/data/preview_data.csv", io_format::csv2);
+    const char *data_path = argv[1];
+    const char *output_path = argv[2];
+    std::cout << "Data input source: " << data_path << std::endl;
+    std::cout << "Data output source: " << output_path << std::endl;
+    df.read(data_path, io_format::csv2);
 
     const auto &accel_lon_col_ref = df.get_column<double>("accel_lon");
     const auto &accel_trans_col_ref = df.get_column<double>("accel_trans");
     const auto &accel_down_col_ref = df.get_column<double>("accel_down");
-    vector<int> data_representation_coll;
-    vector<double> min_accel = {
+    std::vector<int> hilbert_coll, morton_coll;
+    std::vector<double> min_accel = {
             *min_element(accel_lon_col_ref.begin(), accel_lon_col_ref.end()),
             *min_element(accel_trans_col_ref.begin(), accel_trans_col_ref.end()),
             *min_element(accel_down_col_ref.begin(), accel_down_col_ref.end())
@@ -31,42 +38,41 @@ int main() {
 
     for (size_t i = 0; i < accel_lon_col_ref.size(); ++i) {
         uint32_t lon, trans, down;
+        uint64_t morton, hilbert;
 
-        /*
         // Calculate Morton
-        lon = (accel_lon_col_ref[i]+5)*100;
-        trans = (accel_trans_col_ref[i]+5)*100;
-        down = (accel_down_col_ref[i]+5)*100;
+        lon = (accel_lon_col_ref[i]+abs(shift_unit))*100;
+        trans = (accel_trans_col_ref[i]+abs(shift_unit))*100;
 
-        data_representation_coll.push_back(int(mortonEncode(pair<uint32_t,uint32_t>(x,y))));
-        printf("%d, ", int(mortonEncode(pair<uint32_t, uint32_t>(x, y))));
-        */
+        morton = mortonEncode(std::pair<uint32_t,uint32_t>(lon,trans));
+        morton_coll.push_back(morton);
 
         // Calculate Hilbert (keep 1 Decimal)
         lon = (accel_lon_col_ref[i] + abs(shift_unit)) * 10;
         trans = (accel_trans_col_ref[i] + abs(shift_unit)) * 10;
         down = (accel_down_col_ref[i] + abs(shift_unit)) * 10;
 
-        vector<uint32_t> X = {lon, trans, down};
+        std::vector<uint32_t> X = {lon, trans, down};
+        hilbert = HilbertEncode(X);
 
-        bitset<HILBERT_SIZE> hilbert;
+        hilbert_coll.push_back(hilbert);
 
-        for (int j = HILBERT_SIZE - 1; j >= 0; j--) {
-            hilbert[j] = X[2 - j % 3] >> j / 3 & 1;
-        }
-
-        cout << " " << lon << " " << trans << " " << down
-             << " Hilbert integer = " << hilbert.to_string() << " = " << int(hilbert.to_ulong()) << " check"
-             << endl;
-        data_representation_coll.push_back(int(hilbert.to_ulong()));
+        std::cout << "- Shifted data value pair: " << accel_lon_col_ref[i]+5 << " " << accel_trans_col_ref[i]+5 << " " << accel_down_col_ref[i]+5
+                  << " ---> Hilbert integer = " << std::bitset<21>(hilbert)<< " = " << hilbert
+                  << " ---> Morton Code = " << std::bitset<64>(morton)<< " = " << morton
+                  << std::endl;
     }
 
-    //Output converted Morton representation
-    df.load_column<int>("reduced_index", move(data_representation_coll));
-    ofstream loaded_morton;
-    loaded_morton.open("/Users/coulsonchen/Downloads/SpaceAV/SFC/data/loaded_Hilbert_representation.csv");
-    df.write<ostream, long, double, int>(loaded_morton, io_format::csv2);
-    loaded_morton.close();
+    //Output converted representation/index
+    df.load_column<int>("morton_index", move(morton_coll));
+    df.load_column<int>("hilbert_index", move(hilbert_coll));
+    std::ofstream loaded_result;
+    loaded_result.open(output_path);
+    df.write<std::ostream, long, double, int>(loaded_result, io_format::csv2);
+    loaded_result.close();
+
+    std::cout << "Shifted unit:  " << abs(shift_unit) << std::endl;
+    std::cout << "New indexes saved to " << output_path << std::endl;
 
     return 0;
 }
