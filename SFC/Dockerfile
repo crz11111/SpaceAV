@@ -22,6 +22,6 @@ RUN mkdir build && \
 FROM ubuntu:20.04
 
 WORKDIR /usr/bin
-COPY --from=builder /tmp/bin/SFC .
+COPY --from=builder /usr/local/bin/sfc .
 
-ENTRYPOINT ["/usr/bin/SFC"]
+ENTRYPOINT ["/usr/bin/sfc"]

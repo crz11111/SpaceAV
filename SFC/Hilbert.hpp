@@ -8,7 +8,7 @@
 
 #define HILBERT_SIZE 24 //Hilbert integer size in bits
 
-uint64_t HilbertEncode( std::vector<uint32_t> X) // lon, trans, down
+uint64_t HilbertEncode(std::vector<uint32_t> X) // lon, trans, down
 {
     std::bitset<HILBERT_SIZE> hilbert;
 
