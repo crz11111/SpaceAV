@@ -13,6 +13,7 @@
 ```shell
 git clone https://github.com/crz11111/SpaceAV.git SpaceAV
 cd SpaceAv
+cd SFC
 ```
 
 #### Build with Docker
