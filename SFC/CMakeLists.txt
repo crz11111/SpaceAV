@@ -15,7 +15,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(DataFrame)
 
-add_executable(sfc main.cpp MortonExperiment.hpp Hilbert.hpp)
+add_executable(sfc main.cpp Morton.hpp Hilbert.hpp)
 
 target_link_libraries(sfc DataFrame::DataFrame)
 
