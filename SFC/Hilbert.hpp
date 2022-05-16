@@ -19,9 +19,19 @@ uint64_t HilbertEncode(std::vector<uint32_t> X) // lon, trans, down
     return hilbert.to_ulong();
 }
 
-void HilbertDecode(int hilbert_integer) // Hilbert integer
+std::vector<uint32_t> HilbertDecode(uint64_t hilbert_integer) // Hilbert integer
 {
-    // TO-DO Decoding Hilbert integers
+    std::bitset<HILBERT_SIZE> hilbert(hilbert_integer);
+    std::bitset<HILBERT_SIZE / 3> x, y, z;
+    std::vector<std::bitset<HILBERT_SIZE / 3>> X = {x, y, z};
+
+    for (int j = 0; j < HILBERT_SIZE; ++j) {
+        X[j % 3][(HILBERT_SIZE - j - 1) / 3] = hilbert[HILBERT_SIZE - j - 1];
+    }
+
+    return std::vector<uint32_t>{static_cast<unsigned int>(X[0].to_ulong()),
+                                 static_cast<unsigned int>(X[1].to_ulong()),
+                                 static_cast<unsigned int>(X[2].to_ulong())};
 }
 
 #endif //SFC_HILBERT_HPP

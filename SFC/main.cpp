@@ -119,8 +119,9 @@ int main(int argc, char **argv) {
         std::vector<uint32_t> X = {lon, trans, down};
         hilbert = HilbertEncode(X);
 
-        std::cout << "- Shifted data value pair: " << accel_lon_col_ref[i] + 5 << " " << accel_trans_col_ref[i] + 5
-                  << " " << accel_down_col_ref[i] + 5
+        std::cout << "- Shifted data value pair: " << accel_lon_col_ref[i] + shift_unit << " "
+                  << accel_trans_col_ref[i] + shift_unit << " "
+                  << accel_down_col_ref[i] + shift_unit
                   << " ---> Hilbert integer = " << std::bitset<21>(hilbert) << " = " << hilbert
                   << " ---> Morton Code = " << std::bitset<64>(morton) << " = " << morton
                   << std::endl;
@@ -129,12 +130,15 @@ int main(int argc, char **argv) {
         hilbert_coll.push_back(hilbert);
     }
 
+    std::cout << "-------------------------------------------------------------\n" << std::endl;
+
     //Output converted representation/index
     df.load_column<int>("morton_index", move(morton_coll));
     df.load_column<int>("hilbert_index", move(hilbert_coll));
     DataFrameToCSV(df, output_path.append("/loaded_indexes.csv").c_str());
     std::cout << "Shifted unit: " << shift_unit << std::endl;
     std::cout << "New indexes saved to " << output_path << std::endl;
+    std::cout << "-------------------------------------------------------------\n" << std::endl;
     output_path.assign(argv[2]);
 
     // Query Hilbert indexes
@@ -148,8 +152,9 @@ int main(int argc, char **argv) {
 
     // Output converted representation/index
     DataFrameToCSV(query_result, output_path.append("/query_result.csv").c_str());
-    std::cout << "Query range: " << query_range.first << " <-> " << query_range.second << std::endl;
+    std::cout << "Query range Hilbert: " << query_range.first << " <-> " << query_range.second << std::endl;
     std::cout << "Query result saved to " << output_path << std::endl;
+    std::cout << "-------------------------------------------------------------\n" << std::endl;
     output_path.assign(argv[2]);
 
     // Computing event query results
@@ -161,11 +166,14 @@ int main(int argc, char **argv) {
     int l = 0;
     for (std::pair<long, long> suggested_event: query_events) {
         l++;
-        std::cout << "Event " <<  l << " (" << suggested_event.first << ", " << suggested_event.second << ") " << std::endl;
+        std::cout << "Event " << l << " (" << suggested_event.first << ", " << suggested_event.second << ") "
+                  << std::endl;
     }
     if (l == 0) {
-        std::cout << "-----No events found-----" << std::endl;
+        std::cout << "-----------------------No events found-----------------------\n" << std::endl;
+        return 0;
     }
+    std::cout << "-------------------------------------------------------------\n" << std::endl;
 
     return 0;
 }
