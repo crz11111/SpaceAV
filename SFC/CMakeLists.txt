@@ -15,8 +15,15 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(DataFrame)
 
-add_executable(sfc main.cpp Morton.hpp Hilbert.hpp)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+add_executable(sfc src/main.cpp src/Morton.hpp src/Hilbert.hpp)
 
 target_link_libraries(sfc DataFrame::DataFrame)
+
+enable_testing()
+add_executable(hilbert-runner ${CMAKE_CURRENT_SOURCE_DIR}/test/tests-main.cpp ${CMAKE_CURRENT_SOURCE_DIR}/test/tests-hilbert.cpp)
+target_link_libraries(hilbert-runner ${LIBRARIES})
+add_test(NAME hilbert-runner COMMAND hilbert-runner)
 
 install(TARGETS ${PROJECT_NAME} DESTINATION bin COMPONENT ${PROJECT_NAME})
