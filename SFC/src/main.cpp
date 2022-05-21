@@ -9,12 +9,15 @@ using namespace hmdf;
 
 using iDataFrame = StdDataFrame<int>;
 
+#define HILBERT_PRECISION 10
+#define MORTON_PRECISION 100
+
 std::pair<uint64_t, uint64_t>
 ComputeHilbertThres(double shift_unit, double x1, double y1, double z1, double x2, double y2, double z2) {
-    std::vector<uint32_t> up_bound = {(uint32_t) ((x1 + shift_unit) * 10), (uint32_t) ((y1 + shift_unit) * 10),
-                                      (uint32_t) ((z1 + shift_unit) * 10)};
-    std::vector<uint32_t> down_bound = {(uint32_t) ((x2 + shift_unit) * 10), (uint32_t) ((y2 + shift_unit) * 10),
-                                        (uint32_t) ((z2 + shift_unit) * 10)};
+    std::vector<uint32_t> up_bound = {(uint32_t) ((x1 + shift_unit) * HILBERT_PRECISION), (uint32_t) ((y1 + shift_unit) * HILBERT_PRECISION),
+                                      (uint32_t) ((z1 + shift_unit) * HILBERT_PRECISION)};
+    std::vector<uint32_t> down_bound = {(uint32_t) ((x2 + shift_unit) * HILBERT_PRECISION), (uint32_t) ((y2 + shift_unit) * HILBERT_PRECISION),
+                                        (uint32_t) ((z2 + shift_unit) * HILBERT_PRECISION)};
     return std::pair<uint64_t, uint64_t>(HilbertEncode(up_bound), HilbertEncode(down_bound));
 }
 
@@ -96,8 +99,11 @@ int main(int argc, char **argv) {
             std::stod(argv[8]),
             std::stod(argv[9])
     );
+
     if (query_range.first > query_range.second) {
-        query_range.swap(query_range);
+        uint64_t swap_range_cache = query_range.first;
+        query_range.first = query_range.second;
+        query_range.second = swap_range_cache;
     }
 
     // Computing Morton and Hilbert indexes
@@ -106,15 +112,15 @@ int main(int argc, char **argv) {
         uint64_t morton, hilbert;
 
         // Calculate Morton
-        lon = (accel_lon_col_ref[i] + shift_unit) * 100;
-        trans = (accel_trans_col_ref[i] + shift_unit) * 100;
+        lon = (accel_lon_col_ref[i] + shift_unit) * MORTON_PRECISION;
+        trans = (accel_trans_col_ref[i] + shift_unit) * MORTON_PRECISION;
 
         morton = mortonEncode(std::pair<uint32_t, uint32_t>(lon, trans));
 
         // Calculate Hilbert (keep 1 Decimal)
-        lon = (accel_lon_col_ref[i] + shift_unit) * 10;
-        trans = (accel_trans_col_ref[i] + shift_unit) * 10;
-        down = (accel_down_col_ref[i] + shift_unit) * 10;
+        lon = (accel_lon_col_ref[i] + shift_unit) * HILBERT_PRECISION;
+        trans = (accel_trans_col_ref[i] + shift_unit) * HILBERT_PRECISION;
+        down = (accel_down_col_ref[i] + shift_unit) * HILBERT_PRECISION;
 
         std::vector<uint32_t> X = {lon, trans, down};
         hilbert = HilbertEncode(X);
