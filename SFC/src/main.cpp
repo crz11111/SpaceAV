@@ -9,11 +9,10 @@ using namespace hmdf;
 
 using iDataFrame = StdDataFrame<int>;
 
-#define HILBERT_PRECISION 10
+#define HILBERT_PRECISION 1000
 #define MORTON_PRECISION 100
 
-std::pair<uint64_t, uint64_t>
-ComputeHilbertThres(double shift_unit, double x1, double y1, double z1, double x2, double y2, double z2) {
+std::pair<uint64_t, uint64_t> ComputeHilbertThres(double shift_unit, double x1, double y1, double z1, double x2, double y2, double z2) {
     std::vector<uint32_t> up_bound = {(uint32_t) ((x1 + shift_unit) * HILBERT_PRECISION), (uint32_t) ((y1 + shift_unit) * HILBERT_PRECISION),
                                       (uint32_t) ((z1 + shift_unit) * HILBERT_PRECISION)};
     std::vector<uint32_t> down_bound = {(uint32_t) ((x2 + shift_unit) * HILBERT_PRECISION), (uint32_t) ((y2 + shift_unit) * HILBERT_PRECISION),
@@ -24,7 +23,7 @@ ComputeHilbertThres(double shift_unit, double x1, double y1, double z1, double x
 void DataFrameToCSV(iDataFrame df, const char *output_path) {
     std::ofstream loaded_result;
     loaded_result.open(output_path);
-    df.write<std::ostream, long, double, int>(loaded_result, io_format::csv2);
+    df.write<std::ostream, long, double, int, unsigned long long>(loaded_result, io_format::csv2);
     loaded_result.close();
 }
 
@@ -47,6 +46,7 @@ std::vector<std::pair<long, long>> EventsQuery(const std::vector<long> &hilbert_
                 query_events.push_back(event);
             }
             event.first = timestamp_index;
+            event.second = -1;
         }
     }
     return query_events;
@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
     const auto &accel_lon_col_ref = df.get_column<double>("accel_lon");
     const auto &accel_trans_col_ref = df.get_column<double>("accel_trans");
     const auto &accel_down_col_ref = df.get_column<double>("accel_down");
-    std::vector<int> hilbert_coll, morton_coll;
+    std::vector<unsigned long long> hilbert_coll, morton_coll;
 
     //Shifting unit for abstraction in unsigned range
     std::vector<double> min_accel = {
@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
         std::cout << "- Shifted data value pair: " << accel_lon_col_ref[i] + shift_unit << " "
                   << accel_trans_col_ref[i] + shift_unit << " "
                   << accel_down_col_ref[i] + shift_unit
-                  << " ---> Hilbert integer = " << std::bitset<21>(hilbert) << " = " << hilbert
+                  << " ---> Hilbert integer = " << std::bitset<64>(hilbert) << " = " << hilbert
                   << " ---> Morton Code = " << std::bitset<64>(morton) << " = " << morton
                   << std::endl;
 
@@ -139,8 +139,8 @@ int main(int argc, char **argv) {
     std::cout << "-------------------------------------------------------------\n" << std::endl;
 
     //Output converted representation/index
-    df.load_column<int>("morton_index", move(morton_coll));
-    df.load_column<int>("hilbert_index", move(hilbert_coll));
+    df.load_column<unsigned long long>("morton_index", move(morton_coll));
+    df.load_column<unsigned long long>("hilbert_index", move(hilbert_coll));
     DataFrameToCSV(df, output_path.append("/loaded_indexes.csv").c_str());
     std::cout << "Shifted unit: " << shift_unit << std::endl;
     std::cout << "New indexes saved to " << output_path << std::endl;
@@ -149,12 +149,14 @@ int main(int argc, char **argv) {
 
     // Query Hilbert indexes
     // TO-DO Multi-Thread sorting
-    df.sort<int, long, double, int>("hilbert_index", sort_spec::ascen);
-    auto functor = [&query_range](const int &, const int &val1) -> bool {
+    df.sort<unsigned long long, int, long, double, unsigned long long>("hilbert_index", sort_spec::ascen);
+    DataFrameToCSV(df, output_path.append("/sort_test.csv").c_str());
+    output_path.assign(argv[2]);
+    auto functor = [&query_range](const int &, const unsigned long long &val1) -> bool {
         return (val1 >= query_range.first && val1 <= query_range.second);
     };
-    auto query_result = df.get_data_by_sel<int, decltype(functor), long, double, int>("hilbert_index", functor);
-    query_result.sort<long, int, long, double, int>("timestamp", sort_spec::ascen);
+    auto query_result = df.get_data_by_sel<unsigned long long, decltype(functor),int, long, double, unsigned long long>("hilbert_index", functor);
+    query_result.sort<long, int, long, double, unsigned long long>("timestamp", sort_spec::ascen);
 
     // Output converted representation/index
     DataFrameToCSV(query_result, output_path.append("/query_result.csv").c_str());
@@ -172,7 +174,7 @@ int main(int argc, char **argv) {
     int l = 0;
     for (std::pair<long, long> suggested_event: query_events) {
         l++;
-        std::cout << "Event " << l << " (" << suggested_event.first << ", " << suggested_event.second << ") "
+        std::cout << "Event " << l << " (" << suggested_event.first << ", " << suggested_event.second << ") " << suggested_event.second - suggested_event.first
                   << std::endl;
     }
     if (l == 0) {
