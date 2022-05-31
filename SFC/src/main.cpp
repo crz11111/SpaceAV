@@ -27,7 +27,7 @@ void DataFrameToCSV(iDataFrame df, const char *output_path) {
     loaded_result.close();
 }
 
-std::vector<std::pair<long, long>> EventsQuery(const std::vector<long> &hilbert_query, uint64_t duration) {
+std::vector<std::pair<long, long>> EventsQuery(const std::vector<long> &hilbert_query, uint64_t duration, uint64_t min_duration) {
     std::pair<long, long> event(-1, -1);
     std::vector<std::pair<long, long>> query_events;
     for (long timestamp_index: hilbert_query) {
@@ -42,7 +42,7 @@ std::vector<std::pair<long, long>> EventsQuery(const std::vector<long> &hilbert_
                 event = std::pair<long, long>(-1, -1);
             }
         } else {
-            if (event.second != -1) {
+            if (event.second != -1 && event.second-event.first >= min_duration) {
                 query_events.push_back(event);
             }
             event.first = timestamp_index;
@@ -53,11 +53,11 @@ std::vector<std::pair<long, long>> EventsQuery(const std::vector<long> &hilbert_
 }
 
 int main(int argc, char **argv) {
-    if (argc != 3 && argc != 11) {
+    if (argc != 3 && argc != 12) {
         std::cout
                 << "Wrong arguments, please specify your data source as: \n "
                    "sfc <ORIGIN_DATA_PATH> <OUTPUT_PATH> \n"
-                   "-<option> <accel_lon1> <accel_trans1> <accel_down1> <accel_lon2> <accel_trans2> <accel_down2> <duration> \n"
+                   "-<option> <accel_lon1> <accel_trans1> <accel_down1> <accel_lon2> <accel_trans2> <accel_down2> <min_duration> <duration> \n"
                 << std::endl;
         return 1;
     }
@@ -65,7 +65,8 @@ int main(int argc, char **argv) {
     // Read original csv data
     const char *data_path = argv[1];
     std::string output_path(argv[2]);
-    const uint64_t duration = std::stol(argv[10]);
+    const uint64_t min_duration = std::stol(argv[10]);
+    const uint64_t duration = std::stol(argv[11]);
 
     iDataFrame df;
 
@@ -138,6 +139,7 @@ int main(int argc, char **argv) {
 
     std::cout << "-------------------------------------------------------------\n" << std::endl;
 
+
     //Output converted representation/index
     df.load_column<unsigned long long>("morton_index", move(morton_coll));
     df.load_column<unsigned long long>("hilbert_index", move(hilbert_coll));
@@ -167,7 +169,7 @@ int main(int argc, char **argv) {
 
     // Computing event query results
     const std::vector<long> &query_result_timestamp_col_ref = query_result.get_column<long>("timestamp");
-    const std::vector<std::pair<long, long>> query_events = EventsQuery(query_result_timestamp_col_ref, duration);
+    const std::vector<std::pair<long, long>> query_events = EventsQuery(query_result_timestamp_col_ref, duration, min_duration);
 
     // Output query result for events
     std::cout << "Query found events: " << std::endl;
@@ -177,6 +179,7 @@ int main(int argc, char **argv) {
         std::cout << "Event " << l << " (" << suggested_event.first << ", " << suggested_event.second << ") " << suggested_event.second - suggested_event.first
                   << std::endl;
     }
+
     if (l == 0) {
         std::cout << "-----------------------No events found-----------------------\n" << std::endl;
         return 0;
