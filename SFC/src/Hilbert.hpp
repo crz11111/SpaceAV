@@ -6,7 +6,7 @@
 #include <iostream>
 #include <vector>
 
-#define HILBERT_SIZE 24 //Hilbert integer size in bits
+#define HILBERT_SIZE 45 //Hilbert integer size in bits
 
 uint64_t HilbertEncode(std::vector<uint32_t> X) // lon, trans, down
 {
@@ -16,7 +16,7 @@ uint64_t HilbertEncode(std::vector<uint32_t> X) // lon, trans, down
         hilbert[j] = X[2 - j % 3] >> j / 3 & 1;
     }
 
-    return hilbert.to_ulong();
+    return hilbert.to_ullong();
 }
 
 std::vector<uint32_t> HilbertDecode(uint64_t hilbert_integer) // Hilbert integer
